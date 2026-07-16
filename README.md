@@ -1,7 +1,7 @@
 # CSE 325 - Team 11: Personal Finance Tracker
 
 **Course:** CSE 325 - .NET Software Development
-**Team:** Team 11 (solo, approved by instructor)
+**Team:** Solo Project (instructor-approved)
 **Team Member:** Chibuike Collins Okolie
 
 ## Project Overview
