@@ -1,4 +1,4 @@
-# CSE 325 - Team 11: Personal Finance Tracker
+# CSE 325 - Team Project: Personal Finance Tracker
 
 **Course:** CSE 325 - .NET Software Development
 **Team:** Solo Project (instructor-approved)
@@ -36,7 +36,7 @@ complexity of full accounting software.
 
 ## Project Management
 
-- Trello board: [link TBD]
+- Trello board: https://trello.com/b/T92dmmV7/cse325-solo-project-personal-finance-tracker
 
 ## Status
 
