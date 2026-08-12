@@ -1,0 +1,112 @@
+@page "/dashboard"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using FinanceTracker.Data
+@using FinanceTracker.Models
+@inject ApplicationDbContext DbContext
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Dashboard</PageTitle>
+
+<h1>Dashboard</h1>
+
+<div class="mb-3 row g-2 align-items-end" style="max-width: 400px;">
+    <div class="col-auto">
+        <label>Month</label>
+        <InputNumber @bind-Value="selectedMonth" @bind-Value:after="RefreshData" class="form-control" />
+    </div>
+    <div class="col-auto">
+        <label>Year</label>
+        <InputNumber @bind-Value="selectedYear" @bind-Value:after="RefreshData" class="form-control" />
+    </div>
+</div>
+
+@if (categorySpending == null)
+{
+    <p>Loading...</p>
+}
+else if (!categorySpending.Any())
+{
+    <p>No expense data for this month yet.</p>
+}
+else
+{
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card p-3">
+                <h6>Total Income</h6>
+                <h3 class="text-success">@totalIncome.ToString("C")</h3>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card p-3">
+                <h6>Total Expenses</h6>
+                <h3 class="text-danger">@totalExpenses.ToString("C")</h3>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card p-3">
+                <h6>Net</h6>
+                <h3 class="@(net >= 0 ? "text-success" : "text-danger")">@net.ToString("C")</h3>
+            </div>
+        </div>
+    </div>
+
+    <h4>Spending by Category</h4>
+    <div class="chart">
+        @foreach (var item in categorySpending)
+        {
+            var widthPercent = maxSpending == 0 ? 0 : (item.Amount / maxSpending) * 100;
+            <div class="d-flex align-items-center mb-2">
+                <div style="width: 120px;">@item.CategoryName</div>
+                <div style="flex: 1; background: #eee; border-radius: 4px; overflow: hidden;">
+                    <div style="width: @(widthPercent)%; background: #d9534f; color: white; padding: 4px 8px; white-space: nowrap;">
+                        @item.Amount.ToString("C")
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private int selectedMonth = DateTime.Today.Month;
+    private int selectedYear = DateTime.Today.Year;
+    private string? userId;
+    private List<(string CategoryName, decimal Amount)>? categorySpending;
+    private decimal totalIncome;
+    private decimal totalExpenses;
+    private decimal net;
+    private decimal maxSpending;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        await RefreshData();
+    }
+
+    private async Task RefreshData()
+    {
+        var transactions = await DbContext.Transactions
+            .Where(t => t.UserId == userId
+                && t.Date.Month == selectedMonth
+                && t.Date.Year == selectedYear)
+            .Include(t => t.Category)
+            .ToListAsync();
+
+        totalIncome = transactions.Where(t => t.Type == TransactionType.Income).Sum(t => t.Amount);
+        totalExpenses = transactions.Where(t => t.Type == TransactionType.Expense).Sum(t => t.Amount);
+        net = totalIncome - totalExpenses;
+
+        categorySpending = transactions
+            .Where(t => t.Type == TransactionType.Expense)
+            .GroupBy(t => t.Category?.Name ?? "Uncategorized")
+            .Select(g => (CategoryName: g.Key, Amount: g.Sum(t => t.Amount)))
+            .OrderByDescending(x => x.Amount)
+            .ToList();
+
+        maxSpending = categorySpending.Any() ? categorySpending.Max(x => x.Amount) : 0;
+    }
+}
