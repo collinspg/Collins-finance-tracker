@@ -1,0 +1,143 @@
+@page "/transactions"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using FinanceTracker.Data
+@using FinanceTracker.Models
+@inject ApplicationDbContext DbContext
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+<PageTitle>Transactions</PageTitle>
+<h1>Transactions</h1>
+@if (categories == null)
+{
+    <p>Loading...</p>
+}
+else if (!categories.Any())
+{
+    <p>
+        You need at least one category before adding transactions.
+        <a href="categories">Create a category first</a>.
+    </p>
+}
+else
+{
+    <EditForm Model="newTransaction" OnValidSubmit="AddTransaction" class="mb-4">
+        <DataAnnotationsValidator />
+        <div class="row g-2 align-items-end">
+            <div class="col-auto">
+                <label>Description</label>
+                <InputText @bind-Value="newTransaction.Description" class="form-control" autocomplete="off" />
+            </div>
+            <div class="col-auto">
+                <label>Amount</label>
+                <InputNumber @bind-Value="newTransaction.Amount" class="form-control" />
+            </div>
+            <div class="col-auto">
+                <label>Date</label>
+                <InputDate @bind-Value="newTransaction.Date" class="form-control" />
+            </div>
+            <div class="col-auto">
+                <label>Type</label>
+                <InputSelect @bind-Value="newTransaction.Type" class="form-control">
+                    <option value="@TransactionType.Expense">Expense</option>
+                    <option value="@TransactionType.Income">Income</option>
+                </InputSelect>
+            </div>
+            <div class="col-auto">
+                <label>Category</label>
+                <InputSelect @bind-Value="newTransaction.CategoryId" class="form-control">
+                    <option value="0">-- Select --</option>
+                    @foreach (var cat in categories)
+                    {
+                        <option value="@cat.Id">@cat.Name</option>
+                    }
+                </InputSelect>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary">Add</button>
+            </div>
+        </div>
+        <ValidationSummary class="text-danger mt-2" />
+    </EditForm>
+    @if (transactions == null)
+    {
+        <p>Loading transactions...</p>
+    }
+    else if (!transactions.Any())
+    {
+        <p>No transactions yet.</p>
+    }
+    else
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th>Category</th>
+                    <th>Type</th>
+                    <th>Amount</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var t in transactions)
+                {
+                    <tr>
+                        <td>@t.Date.ToShortDateString()</td>
+                        <td>@t.Description</td>
+                        <td>@t.Category?.Name</td>
+                        <td>@t.Type</td>
+                        <td>@t.Amount.ToString("C")</td>
+                        <td>
+                            <button class="btn btn-sm btn-danger" @onclick="() => DeleteTransaction(t.Id)">Delete</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+@code {
+    private List<Category>? categories;
+    private List<Transaction>? transactions;
+    private Transaction newTransaction = new();
+    private string? userId;
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        newTransaction = new Transaction { Date = DateTime.Today, UserId = userId ?? string.Empty };
+        categories = await DbContext.Categories
+            .Where(c => c.UserId == userId)
+            .OrderBy(c => c.Name)
+            .ToListAsync();
+        await LoadTransactions();
+    }
+    private async Task LoadTransactions()
+    {
+        transactions = await DbContext.Transactions
+            .Where(t => t.UserId == userId)
+            .Include(t => t.Category)
+            .OrderByDescending(t => t.Date)
+            .ToListAsync();
+    }
+    private async Task AddTransaction()
+    {
+        if (userId == null || newTransaction.CategoryId == 0) return;
+        DbContext.Transactions.Add(newTransaction);
+        await DbContext.SaveChangesAsync();
+        newTransaction = new Transaction { Date = DateTime.Today, UserId = userId };
+        await LoadTransactions();
+    }
+    private async Task DeleteTransaction(int id)
+    {
+        var transaction = await DbContext.Transactions.FindAsync(id);
+        if (transaction != null)
+        {
+            DbContext.Transactions.Remove(transaction);
+            await DbContext.SaveChangesAsync();
+            await LoadTransactions();
+        }
+    }
+}
