@@ -1,0 +1,60 @@
+@page "/settings"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using FinanceTracker.Data
+@inject ApplicationDbContext DbContext
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Settings</PageTitle>
+
+<h1>Settings</h1>
+
+@if (user == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <div class="mb-3" style="max-width: 300px;">
+        <label>Preferred Currency</label>
+        <select class="form-control" @bind="selectedCurrency">
+            <option value="USD">US Dollar ($)</option>
+            <option value="NGN">Nigerian Naira (₦)</option>
+        </select>
+    </div>
+    <button class="btn btn-primary" @onclick="SaveCurrency">Save</button>
+
+    @if (saved)
+    {
+        <p class="text-success mt-2">Saved!</p>
+    }
+}
+
+@code {
+    private ApplicationUser? user;
+    private string selectedCurrency = "USD";
+    private string? userId;
+    private bool saved = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        user = await DbContext.Users.FindAsync(userId);
+        if (user != null)
+        {
+            selectedCurrency = user.PreferredCurrency;
+        }
+    }
+
+    private async Task SaveCurrency()
+    {
+        if (user == null) return;
+
+        user.PreferredCurrency = selectedCurrency;
+        await DbContext.SaveChangesAsync();
+        saved = true;
+    }
+}

@@ -92,7 +92,7 @@ else
                         <td>@t.Description</td>
                         <td>@t.Category?.Name</td>
                         <td>@t.Type</td>
-                        <td>@t.Amount.ToString("C")</td>
+                        <td>@CurrencyHelper.Format(t.Amount, currencyCode)</td>
                         <td>
                             <button class="btn btn-sm btn-danger" @onclick="() => DeleteTransaction(t.Id)">Delete</button>
                         </td>
@@ -107,10 +107,19 @@ else
     private List<Transaction>? transactions;
     private Transaction newTransaction = new();
     private string? userId;
+    private string currencyCode = "USD";
+
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        var user = await DbContext.Users.FindAsync(userId);
+        if (user != null)
+        {
+            currencyCode = user.PreferredCurrency;
+        }
+
         newTransaction = new Transaction { Date = DateTime.Today, UserId = userId ?? string.Empty };
         categories = await DbContext.Categories
             .Where(c => c.UserId == userId)

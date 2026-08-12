@@ -84,8 +84,8 @@ else
                     <tr class="@(overBudget ? "table-danger" : "")">
                         <td>@b.Category?.Name</td>
                         <td>@b.Month/@b.Year</td>
-                        <td>@b.MonthlyLimit.ToString("C")</td>
-                        <td>@spent.ToString("C")</td>
+                        <td>@CurrencyHelper.Format(b.MonthlyLimit, currencyCode)</td>
+                        <td>@CurrencyHelper.Format(spent, currencyCode)</td>
                         <td>
                             <button class="btn btn-sm btn-danger" @onclick="() => DeleteBudget(b.Id)">Delete</button>
                         </td>
@@ -102,11 +102,18 @@ else
     private List<Transaction>? allTransactions;
     private Budget newBudget = new();
     private string? userId;
+    private string currencyCode = "USD";
 
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        var user = await DbContext.Users.FindAsync(userId);
+        if (user != null)
+        {
+            currencyCode = user.PreferredCurrency;
+        }
 
         newBudget = new Budget
         {

@@ -36,19 +36,19 @@ else
         <div class="col-md-4">
             <div class="card p-3">
                 <h6>Total Income</h6>
-                <h3 class="text-success">@totalIncome.ToString("C")</h3>
+                <h3 class="text-success">@CurrencyHelper.Format(totalIncome, currencyCode)</h3>
             </div>
         </div>
         <div class="col-md-4">
             <div class="card p-3">
                 <h6>Total Expenses</h6>
-                <h3 class="text-danger">@totalExpenses.ToString("C")</h3>
+                <h3 class="text-danger">@CurrencyHelper.Format(totalExpenses, currencyCode)</h3>
             </div>
         </div>
         <div class="col-md-4">
             <div class="card p-3">
                 <h6>Net</h6>
-                <h3 class="@(net >= 0 ? "text-success" : "text-danger")">@net.ToString("C")</h3>
+                <h3 class="@(net >= 0 ? "text-success" : "text-danger")">@CurrencyHelper.Format(net, currencyCode)</h3>
             </div>
         </div>
     </div>
@@ -62,7 +62,7 @@ else
                 <div style="width: 120px;">@item.CategoryName</div>
                 <div style="flex: 1; background: #eee; border-radius: 4px; overflow: hidden;">
                     <div style="width: @(widthPercent)%; background: #d9534f; color: white; padding: 4px 8px; white-space: nowrap;">
-                        @item.Amount.ToString("C")
+                        @CurrencyHelper.Format(item.Amount, currencyCode)
                     </div>
                 </div>
             </div>
@@ -74,6 +74,7 @@ else
     private int selectedMonth = DateTime.Today.Month;
     private int selectedYear = DateTime.Today.Year;
     private string? userId;
+    private string currencyCode = "USD";
     private List<(string CategoryName, decimal Amount)>? categorySpending;
     private decimal totalIncome;
     private decimal totalExpenses;
@@ -84,6 +85,13 @@ else
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        var user = await DbContext.Users.FindAsync(userId);
+        if (user != null)
+        {
+            currencyCode = user.PreferredCurrency;
+        }
+
         await RefreshData();
     }
 
