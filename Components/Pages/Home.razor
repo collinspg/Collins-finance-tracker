@@ -1,7 +1,57 @@
 ﻿@page "/"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@inject NavigationManager Navigation
 
-<PageTitle>Home</PageTitle>
+<PageTitle>FinanceTracker - Take Control of Your Money</PageTitle>
 
-<h1>Hello, world!</h1>
+<AuthorizeView>
+    <Authorized>
+        @{
+            Navigation.NavigateTo("/dashboard", forceLoad: false);
+        }
+    </Authorized>
+    <NotAuthorized>
+        <div class="landing-hero">
+            <div class="landing-hero-content">
+                <h1>Take control of your finances.</h1>
+                <p class="landing-subtitle">
+                    Track income and expenses, organize spending by category, and stay on
+                    budget — all in one simple dashboard.
+                </p>
+                <div class="landing-cta">
+                    <a href="Account/Register" class="btn btn-primary btn-lg">Get Started Free</a>
+                    <a href="Account/Login" class="btn btn-outline-light btn-lg">Log In</a>
+                </div>
+            </div>
+        </div>
 
-Welcome to your new app.
+        <div class="landing-features">
+            <div class="feature-card">
+                <div class="feature-icon">💰</div>
+                <h3>Track Transactions</h3>
+                <p>Log every expense and paycheck in seconds, and see exactly where your money goes.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <h3>Visual Dashboard</h3>
+                <p>Get an at-a-glance view of your income, spending, and balance trends over time.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🏷️</div>
+                <h3>Custom Categories</h3>
+                <p>Organize spending into categories that actually match your life and habits.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🎯</div>
+                <h3>Set Budgets</h3>
+                <p>Define spending limits per category and get a clear picture of how you're tracking.</p>
+            </div>
+        </div>
+
+        <div class="landing-footer-cta">
+            <h2>Ready to get started?</h2>
+            <a href="Account/Register" class="btn btn-primary btn-lg">Create Your Free Account</a>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
