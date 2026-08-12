@@ -1,0 +1,177 @@
+@page "/budgets"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using FinanceTracker.Data
+@using FinanceTracker.Models
+@inject ApplicationDbContext DbContext
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthStateProvider
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Budgets</PageTitle>
+
+<h1>Budgets</h1>
+
+@if (categories == null)
+{
+    <p>Loading...</p>
+}
+else if (!categories.Any())
+{
+    <p>
+        You need at least one category before setting budgets.
+        <a href="categories">Create a category first</a>.
+    </p>
+}
+else
+{
+    <EditForm Model="newBudget" OnValidSubmit="AddBudget" class="mb-4">
+        <DataAnnotationsValidator />
+        <div class="row g-2 align-items-end">
+            <div class="col-auto">
+                <label>Category</label>
+                <InputSelect @bind-Value="newBudget.CategoryId" class="form-control">
+                    <option value="0">-- Select --</option>
+                    @foreach (var cat in categories)
+                    {
+                        <option value="@cat.Id">@cat.Name</option>
+                    }
+                </InputSelect>
+            </div>
+            <div class="col-auto">
+                <label>Monthly Limit</label>
+                <InputNumber @bind-Value="newBudget.MonthlyLimit" class="form-control" />
+            </div>
+            <div class="col-auto">
+                <label>Month</label>
+                <InputNumber @bind-Value="newBudget.Month" class="form-control" />
+            </div>
+            <div class="col-auto">
+                <label>Year</label>
+                <InputNumber @bind-Value="newBudget.Year" class="form-control" />
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary">Add</button>
+            </div>
+        </div>
+        <ValidationSummary class="text-danger mt-2" />
+    </EditForm>
+
+    @if (budgets == null)
+    {
+        <p>Loading budgets...</p>
+    }
+    else if (!budgets.Any())
+    {
+        <p>No budgets set yet.</p>
+    }
+    else
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>Month/Year</th>
+                    <th>Monthly Limit</th>
+                    <th>Spent So Far</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var b in budgets)
+                {
+                    var spent = GetSpent(b);
+                    var overBudget = spent > b.MonthlyLimit;
+                    <tr class="@(overBudget ? "table-danger" : "")">
+                        <td>@b.Category?.Name</td>
+                        <td>@b.Month/@b.Year</td>
+                        <td>@b.MonthlyLimit.ToString("C")</td>
+                        <td>@spent.ToString("C")</td>
+                        <td>
+                            <button class="btn btn-sm btn-danger" @onclick="() => DeleteBudget(b.Id)">Delete</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@code {
+    private List<Category>? categories;
+    private List<Budget>? budgets;
+    private List<Transaction>? allTransactions;
+    private Budget newBudget = new();
+    private string? userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        newBudget = new Budget
+        {
+            UserId = userId ?? string.Empty,
+            Month = DateTime.Today.Month,
+            Year = DateTime.Today.Year
+        };
+
+        categories = await DbContext.Categories
+            .Where(c => c.UserId == userId)
+            .OrderBy(c => c.Name)
+            .ToListAsync();
+
+        allTransactions = await DbContext.Transactions
+            .Where(t => t.UserId == userId)
+            .ToListAsync();
+
+        await LoadBudgets();
+    }
+
+    private async Task LoadBudgets()
+    {
+        budgets = await DbContext.Budgets
+            .Where(b => b.UserId == userId)
+            .Include(b => b.Category)
+            .OrderBy(b => b.Year).ThenBy(b => b.Month)
+            .ToListAsync();
+    }
+
+    private decimal GetSpent(Budget b)
+    {
+        if (allTransactions == null) return 0;
+
+        return allTransactions
+            .Where(t => t.CategoryId == b.CategoryId
+                && t.Type == TransactionType.Expense
+                && t.Date.Month == b.Month
+                && t.Date.Year == b.Year)
+            .Sum(t => t.Amount);
+    }
+
+    private async Task AddBudget()
+    {
+        if (userId == null || newBudget.CategoryId == 0) return;
+
+        DbContext.Budgets.Add(newBudget);
+        await DbContext.SaveChangesAsync();
+
+        newBudget = new Budget
+        {
+            UserId = userId,
+            Month = DateTime.Today.Month,
+            Year = DateTime.Today.Year
+        };
+        await LoadBudgets();
+    }
+
+    private async Task DeleteBudget(int id)
+    {
+        var budget = await DbContext.Budgets.FindAsync(id);
+        if (budget != null)
+        {
+            DbContext.Budgets.Remove(budget);
+            await DbContext.SaveChangesAsync();
+            await LoadBudgets();
+        }
+    }
+}
