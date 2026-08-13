@@ -30,14 +30,16 @@ if (!string.IsNullOrEmpty(databaseUrl))
     // Running on Render (or similar) with a Postgres database attached.
     var npgsqlConnectionString = ConvertPostgresUrlToNpgsqlConnectionString(databaseUrl);
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
-        options.UseNpgsql(npgsqlConnectionString));
+        options.UseNpgsql(npgsqlConnectionString)
+               .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
 }
 else
 {
     // Local development: fall back to SQLite.
     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
-        options.UseSqlite(connectionString));
+        options.UseSqlite(connectionString)
+               .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
 }
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
