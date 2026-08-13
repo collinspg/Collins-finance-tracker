@@ -5,6 +5,10 @@ using Microsoft.EntityFrameworkCore;
 using FinanceTracker.Components;
 using FinanceTracker.Components.Account;
 using FinanceTracker.Data;
+// Disable appsettings.json file-watching (FileSystemWatcher/inotify) — Render's
+// container environment has a low inotify instance limit that this can exhaust,
+// crashing the app on startup. Production doesn't need hot-reload of config anyway.
+Environment.SetEnvironmentVariable("DOTNET_hostBuilder:reloadConfigOnChange", "false");
 var builder = WebApplication.CreateBuilder(args);
 // Force a consistent currency/number culture regardless of the host container's locale.
 // Without this, environments (like Render) with no locale configured fall back to the
