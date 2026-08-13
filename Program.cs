@@ -55,18 +55,17 @@ static string ConvertPostgresUrlToNpgsqlConnectionString(string databaseUrl)
 {
     var uri = new Uri(databaseUrl);
     var userInfo = uri.UserInfo.Split(':');
-    return $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};" +
+    var port = uri.Port == -1 ? 5432 : uri.Port;
+    return $"Host={uri.Host};Port={port};Database={uri.AbsolutePath.TrimStart('/')};" +
            $"Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true";
 }
 var app = builder.Build();
-
 // Automatically apply pending migrations on startup (creates schema on first deploy).
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     db.Database.Migrate();
 }
-
 // Apply the same fixed culture to every request pipeline thread as well, for good measure.
 var supportedCultures = new[] { defaultCulture };
 app.UseRequestLocalization(new Microsoft.AspNetCore.Builder.RequestLocalizationOptions
