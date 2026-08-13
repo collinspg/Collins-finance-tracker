@@ -120,7 +120,7 @@ else
             currencyCode = user.PreferredCurrency;
         }
 
-        newTransaction = new Transaction { Date = DateTime.Today, UserId = userId ?? string.Empty };
+        newTransaction = new Transaction { Date = DateTime.SpecifyKind(DateTime.Today, DateTimeKind.Utc), UserId = userId ?? string.Empty };
         categories = await DbContext.Categories
             .Where(c => c.UserId == userId)
             .OrderBy(c => c.Name)
@@ -138,9 +138,10 @@ else
     private async Task AddTransaction()
     {
         if (userId == null || newTransaction.CategoryId == 0) return;
+        newTransaction.Date = DateTime.SpecifyKind(newTransaction.Date, DateTimeKind.Utc);
         DbContext.Transactions.Add(newTransaction);
         await DbContext.SaveChangesAsync();
-        newTransaction = new Transaction { Date = DateTime.Today, UserId = userId };
+        newTransaction = new Transaction { Date = DateTime.SpecifyKind(DateTime.Today, DateTimeKind.Utc), UserId = userId };
         await LoadTransactions();
     }
     private async Task DeleteTransaction(int id)
