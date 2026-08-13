@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FinanceTracker.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260813101755_InitialPostgresMigration")]
+    [Migration("20260813102928_InitialPostgresMigration")]
     partial class InitialPostgresMigration
     {
         /// <inheritdoc />
